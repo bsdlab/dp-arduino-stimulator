@@ -1,0 +1,23 @@
+# This is the default configuration for loggers derived from this module
+# in an actuall setup, the logging will be overwritten via a command to the
+# server providing the configs in the json payload. This is orchestrated from
+# the control room on module initialization and includes at least a fileHandler
+# for logging to a joint log file
+version: 1
+formatters:
+  dareplane_standard:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+handlers:
+  # for the final setup, no console handler is needed, but it is included here
+  # for testing purposes.
+  console:
+    class: logging.StreamHandler
+    formatter: dareplane_standard
+  file:
+    class: logging.FileHandler
+    filename: "mmap_stim_sim.log"
+    formatter: dareplane_standard
+loggers:
+  control_room:
+    handlers: [console, file]
+    propagate: no

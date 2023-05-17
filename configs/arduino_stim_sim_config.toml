@@ -1,0 +1,8 @@
+[stream_to_query]
+stream = "control_signal"       # Values of the control_signal are directly written to the serial port, make sure the values are in the correct range for the arduino to be processed
+buffer_size_s = 1.5
+[stimulation]
+delay_us = 0                 # to artificially add a delay_us (simulate delay by the stimulation unit)
+[arduino]
+port = 'COM3'               # The port at which to find your arduino (quickest way is to check with the arduino IDE)
+baudrate = 9600
