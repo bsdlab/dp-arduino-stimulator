@@ -3,15 +3,11 @@ import threading
 import tomllib
 import pylsl
 
-from functools import partial
-
 from fire import Fire
-from arduino_stim.stream_watcher import (
-    StreamWatcher,
-    pylsl_xmlelement_to_dict,
-)
+from dareplane_utils.stream_watcher.lsl_stream_watcher import StreamWatcher
+from dareplane_utils.logging.logger import get_logger
 
-from arduino_stim.utils.logging import logger
+logger = get_logger("arduino_stim")
 
 
 def connect_stream_watcher(config: dict) -> StreamWatcher:
