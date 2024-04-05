@@ -1,4 +1,6 @@
+import time
 import serial
+import pylsl
 import threading
 import tomllib
 import pylsl
@@ -8,6 +10,29 @@ from dareplane_utils.stream_watcher.lsl_stream_watcher import StreamWatcher
 from dareplane_utils.logging.logger import get_logger
 
 logger = get_logger("arduino_stim")
+
+
+def init_lsl_outlet() -> pylsl.StreamOutlet:
+    n_channels = 1
+    info = pylsl.StreamInfo(
+        "arduino_cmd",
+        "arduino_stim",
+        n_channels,
+        0,  # srate = 0 --> irregular stream
+        "int32",
+    )
+
+    # enrich a channel name
+    chns = info.desc().append_child("channels")
+    ch = chns.append_child("channel")
+    ch.append_child_value("label", "arduino_stim")
+    ch.append_child_value("unit", "AU")
+    ch.append_child_value("type", "arduino_stim")
+    ch.append_child_value("scaling_factor", "1")
+
+    outlet = pylsl.StreamOutlet(info)
+
+    return outlet
 
 
 def connect_stream_watcher(config: dict) -> StreamWatcher:
@@ -33,23 +58,59 @@ def main(
     config = tomllib.load(open("./configs/arduino_stim_sim_config.toml", "rb"))
     sw = connect_stream_watcher(config)
 
+    outlet = init_lsl_outlet()
+
     last_val = 0
+
+    tlast = time.time_ns()
+    dt_us = 100  # for update polling
 
     acfg = config["arduino"]
     with serial.Serial(
         port=acfg["port"], baudrate=acfg["baudrate"], timeout=0.1
     ) as arduino:
         while not stop_event.is_set() and arduino is not None:
-            sw.update()
-            if sw.n_new > 0:
-                if "delay_s" in config["stimulation"].keys():
-                    lsl_delay(config["stimulation"]["delay_s"])
-                val = sw.unfold_buffer()[0]
-                print(f"{val} - {last_val}")
-                if val != last_val and len(val) == 1:
-                    arduino.write(f"{int(val[0])}\n".encode())
-                    sw.n_new = 0
-                    last_val = val
+            # limit the update rate
+            if time.time_ns() - tlast > dt_us * 1e3:
+                preupdate = time.time_ns()
+                sw.update()
+                # postupdate = time.time_ns()
+
+                dt_ms = (time.time_ns() - tlast) / 1e6
+
+                if (
+                    sw.n_new > 0
+                    and dt_ms > config["stimulation"]["grace_period_ms"]
+                ):
+                    # if "delay_s" in config["stimulation"].keys():
+                    #     lsl_delay(config["stimulation"]["delay_s"])
+                    # preunfold = time.time_ns()
+                    val = sw.unfold_buffer()[-1]
+                    # postunfold = time.time_ns()
+                    # print(f"{val} - {last_val}")
+                    if val != last_val and len(val) == 1:
+                        # send to the arduino
+                        ival = int(val[0])
+                        # v = "u" if ival > 127 else "d"
+                        outlet.push_sample([ival])
+                        if ival > 127:
+                            arduino.write("u".encode())
+                            arduino.write("d".encode())
+
+                        # postwrite = time.time_ns()
+                        # log to lsl
+                        outlet.push_sample([ival])
+                        #
+                        # postpush = time.time_ns()
+
+                        # reset the tracker
+                        sw.n_new = 0
+                        last_val = val
+                        # tlast = time.time_ns()
+
+                        # logger.debug(
+                        #     f"{postupdate-preupdate=}, {preunfold-preupdate=}, {postunfold-preupdate=}, {postwrite-preupdate=}, {postpush-preupdate=}"
+                        # )
 
 
 def get_main_thread() -> tuple[threading.Thread, threading.Event]:
@@ -61,6 +122,35 @@ def get_main_thread() -> tuple[threading.Thread, threading.Event]:
 
     return thread, stop_event
 
+
+def write_and_read(arduino: serial.Serial, message: str):
+    tpre = time.time_ns()
+
+    while time.time_ns() - tpre < 10_000_000_000:
+        arduino.write("u".encode())
+        arduino.write("d".encode())
+    # l = arduino.readline()
+    # #
+    # tfirst = time.time_ns()
+    # print(f"{tfirst-tpre=}")
+    # l2 = arduino.readline()
+    # tsecond = time.time_ns()
+    #
+    # l = l.decode()
+    # l2 = l2.decode()
+    #
+    # retstr = f"{l=} {l2=} {tsecond-tfirst=} {tfirst-tpre=} {tsecond-tpre=}"
+    # print(retstr)
+
+
+# In [89]: %timeit arduino.write('u'.encode())
+# 520 µs ± 19.7 ns per loop (mean ± std. dev. of 7 runs, 1,000 loops ea
+# ch)
+# Also the full cycle seems to be about 520us as tested with the oscilloscope and this:
+#
+# while time.time_ns() - tpre < 10_000_000_000:
+#     arduino.write('u'.encode())
+#     arduino.write('d'.encode())
 
 if __name__ == "__main__":
     Fire(main)
