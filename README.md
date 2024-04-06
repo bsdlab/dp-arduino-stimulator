@@ -16,7 +16,7 @@ boolean newData = false;
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   
-  Serial.begin(38400);
+  Serial.begin(19200);
   Serial.println("Serial started!");
 
   // Use pin 2 for our signal
@@ -25,19 +25,15 @@ void setup() {
 }
 
 //============
-
 void loop() {
     recvUntilNewLine();
 
     if (newData == true) { 
-        intFromSerial = parseData(); 
-
-        if (intFromSerial > 128 ) {
-          Serial.println("Setting to high");
+        if (strcmp(inBuffer, "u") == 0) {
+          // Serial.println("Setting HIGH");
           digitalWrite(2, HIGH);
-        }
-        if (intFromSerial <= 128 ){
-          Serial.println("Setting to low");
+        } else if (strcmp(inBuffer, "d") == 0){
+          // Serial.println("Setting LOW");
           digitalWrite(2, LOW);
         }
         // showParsedData();
@@ -67,15 +63,9 @@ void recvUntilNewLine() {
               ndx = 0;
               newData = true;
           }
+        // Echo back for debugging
+        Serial.println(inBuffer);
     }
-}
-
-//============
-
-// Read inBuffer to integer
-int parseData() {
-  int result = atoi(inBuffer);
-  return result;
 }
 
 //============

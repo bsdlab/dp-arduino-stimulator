@@ -74,43 +74,25 @@ def main(
             if time.time_ns() - tlast > dt_us * 1e3:
                 preupdate = time.time_ns()
                 sw.update()
-                # postupdate = time.time_ns()
-
                 dt_ms = (time.time_ns() - tlast) / 1e6
 
                 if (
                     sw.n_new > 0
                     and dt_ms > config["stimulation"]["grace_period_ms"]
                 ):
-                    # if "delay_s" in config["stimulation"].keys():
-                    #     lsl_delay(config["stimulation"]["delay_s"])
-                    # preunfold = time.time_ns()
+
                     val = sw.unfold_buffer()[-1]
-                    # postunfold = time.time_ns()
-                    # print(f"{val} - {last_val}")
                     if val != last_val and len(val) == 1:
-                        # send to the arduino
                         ival = int(val[0])
-                        # v = "u" if ival > 127 else "d"
                         outlet.push_sample([ival])
                         if ival > 127:
-                            arduino.write("u".encode())
-                            arduino.write("d".encode())
+                            arduino.write("u\n".encode())
+                            arduino.write("d\n".encode())
 
-                        # postwrite = time.time_ns()
-                        # log to lsl
                         outlet.push_sample([ival])
-                        #
-                        # postpush = time.time_ns()
 
-                        # reset the tracker
                         sw.n_new = 0
                         last_val = val
-                        # tlast = time.time_ns()
-
-                        # logger.debug(
-                        #     f"{postupdate-preupdate=}, {preunfold-preupdate=}, {postunfold-preupdate=}, {postwrite-preupdate=}, {postpush-preupdate=}"
-                        # )
 
 
 def get_main_thread() -> tuple[threading.Thread, threading.Event]:
@@ -127,8 +109,8 @@ def write_and_read(arduino: serial.Serial, message: str):
     tpre = time.time_ns()
 
     while time.time_ns() - tpre < 10_000_000_000:
-        arduino.write("u".encode())
-        arduino.write("d".encode())
+        arduino.write("u\n".encode())
+        arduino.write("d\n".encode())
     # l = arduino.readline()
     # #
     # tfirst = time.time_ns()
