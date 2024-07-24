@@ -8,6 +8,7 @@ import pylsl
 from fire import Fire
 from dareplane_utils.stream_watcher.lsl_stream_watcher import StreamWatcher
 from dareplane_utils.logging.logger import get_logger
+from arduino_stim.utils.time import sleep_s
 
 logger = get_logger("arduino_stim")
 
@@ -16,7 +17,7 @@ def init_lsl_outlet() -> pylsl.StreamOutlet:
     n_channels = 1
     info = pylsl.StreamInfo(
         "arduino_cmd",
-        "arduino_stim",
+        "Marker",
         n_channels,
         0,  # srate = 0 --> irregular stream
         "int32",
@@ -62,7 +63,7 @@ def main(
 
     last_val = 0
 
-    tlast = time.time_ns()
+    tlast = time.perf_counter_ns()
     dt_us = 100  # for update polling
 
     acfg = config["arduino"]
@@ -71,10 +72,10 @@ def main(
     ) as arduino:
         while not stop_event.is_set() and arduino is not None:
             # limit the update rate
-            if time.time_ns() - tlast > dt_us * 1e3:
-                preupdate = time.time_ns()
+            if time.perf_counter_ns() - tlast > dt_us * 1e3:
+                preupdate = time.perf_counter_ns()
                 sw.update()
-                dt_ms = (time.time_ns() - tlast) / 1e6
+                dt_ms = (time.perf_counter_ns() - tlast) / 1e6
 
                 if (
                     sw.n_new > 0
@@ -82,10 +83,11 @@ def main(
                 ):
 
                     val = sw.unfold_buffer()[-1]
+
                     if val != last_val and len(val) == 1:
                         ival = int(val[0])
-                        outlet.push_sample([ival])
                         if ival > 127:
+                            # print("Pushing up-down")
                             arduino.write("u\n".encode())
                             arduino.write("d\n".encode())
 
@@ -93,6 +95,9 @@ def main(
 
                         sw.n_new = 0
                         last_val = val
+                        tlast = time.perf_counter_ns()
+
+                        sleep_s(dt_us * 1e-6 * 0.9)
 
 
 def get_main_thread() -> tuple[threading.Thread, threading.Event]:
