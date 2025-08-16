@@ -14,6 +14,17 @@ logger = get_logger("arduino_stim")
 
 
 def init_lsl_outlet() -> pylsl.StreamOutlet:
+    """    
+    Initializes an LSL outlet to stream Arduino commands as a single-channel stream.
+
+    This function creates an LSL outlet named ``arduino_cmd`` with a single channel of type "Marker" and format "int32".
+    The sample rate is set to 0, indicating an irregular stream.
+
+    Returns
+    -------
+    pylsl.StreamOutlet
+        The LSL outlet for streaming the Arduino commands.
+    """
     n_channels = 1
     info = pylsl.StreamInfo(
         "arduino_cmd",
@@ -37,6 +48,21 @@ def init_lsl_outlet() -> pylsl.StreamOutlet:
 
 
 def connect_stream_watcher(config: dict) -> StreamWatcher:
+    """
+    Connect to and configure the input stream watcher.
+
+    This function initializes a StreamWatcher to monitor an input LSL stream.
+
+    Parameters
+    ----------
+    config : dict
+        Configuration dictionary containing stream connection settings.
+
+    Returns
+    -------
+    StreamWatcher
+        Connected StreamWatcher instance ready for data monitoring.
+    """
     sw = StreamWatcher(
         config["stream_to_query"]["stream"],
         buffer_size_s=config["stream_to_query"]["buffer_size_s"],
@@ -55,6 +81,30 @@ def lsl_delay(dt_us: int = 0):
 def main(
     stop_event: threading.Event = threading.Event(), logger_level: int = 10
 ):
+    """
+    The Arduino stimulator main loop.
+
+    Watches an input LSL stream, processes the data, and sends a signal to the Arduino over a serial connection,
+    as well as the ``arduino_cmd`` LSL outlet. The stream to watch, buffer size, grace period, Arduino port and the Arduino baudrate are defined in the configuration file.
+
+    The loop runs until ``stop_event`` is set.
+
+    Parameters
+    ----------
+    stop_event : threading.Event, optional
+        Event used to terminate the loop from another thread. If not provided, a new one is created.
+    logger_level : int, optional
+        Logging level passed to the module logger (e.g., 10=DEBUG, 20=INFO). Default is 10.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    - Configuration is loaded from ``./configs/arduino_stim_sim_config.toml``.
+    """
+
     logger.setLevel(logger_level)
     config = tomllib.load(open("./configs/arduino_stim_sim_config.toml", "rb"))
     sw = connect_stream_watcher(config)
@@ -84,6 +134,8 @@ def main(
 
                     val = sw.unfold_buffer()[-1]
 
+                    # Process the incoming data and send commands
+                    #  implement your controller logic here
                     if val != last_val and len(val) == 1:
                         ival = int(val[0])
                         if ival > 127:
@@ -101,6 +153,20 @@ def main(
 
 
 def get_main_thread() -> tuple[threading.Thread, threading.Event]:
+    """
+    Run the main loop in a separate thread.
+
+    This function creates and starts a background thread that runs the main
+    arduino stimulator loop. It allows the Arduino controller to be stopped via 
+    the returned Event object.
+
+    Returns
+    -------
+    tuple[threading.Thread, threading.Event]
+        A tuple containing:
+        - threading.Thread: The thread object running the main loop
+        - threading.Event: Event object that can be .set() to stop the main loop
+    """
     stop_event = threading.Event()
     stop_event.clear()
 
