@@ -1,12 +1,9 @@
-
 import time
+
 import serial
 
 dt = 0.5
-with serial.Serial(
-    port="COM3", baudrate=19200, timeout=0.1
-) as arduino:
-
+with serial.Serial(port="COM3", baudrate=19200, timeout=0.1) as arduino:
     for i in range(20):
         print(f"Loop {i}")
 
@@ -17,5 +14,3 @@ with serial.Serial(
         arduino.write("d\n".encode())
         time.sleep(dt)
         print(arduino.read(100))
-
-

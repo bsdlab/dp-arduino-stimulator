@@ -1,12 +1,10 @@
+from dareplane_utils.default_server.server import DefaultServer
 from fire import Fire
 
-from dareplane_utils.default_server.server import DefaultServer
 from arduino_stim.main import get_main_thread
 
 
 def main(port: int = 8080, ip: str = "127.0.0.1", loglevel: int = 10):
-    # logger.setLevel(loglevel)
-
     pcommand_map = {
         "START": get_main_thread  # note: that this will return a thread and an according stop_event, the default server will be able to do the bookkeeping including stopping the thread when STOP or CLOSE are called
     }
