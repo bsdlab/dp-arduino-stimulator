@@ -80,6 +80,7 @@ def main(stop_event: threading.Event = threading.Event(), logger_level: int = 10
                     if val != last_val and len(val) == 1:
                         ival = int(val[0])
                         if ival > 127:
+                            # print("Pushing up-down")
                             arduino.write("u\n".encode())
                             arduino.write("d\n".encode())
 
@@ -108,7 +109,28 @@ def write_and_read(arduino: serial.Serial, message: str):
     while time.time_ns() - tpre < 10_000_000_000:
         arduino.write("u\n".encode())
         arduino.write("d\n".encode())
+    # l = arduino.readline()
+    # #
+    # tfirst = time.time_ns()
+    # print(f"{tfirst-tpre=}")
+    # l2 = arduino.readline()
+    # tsecond = time.time_ns()
+    #
+    # l = l.decode()
+    # l2 = l2.decode()
+    #
+    # retstr = f"{l=} {l2=} {tsecond-tfirst=} {tfirst-tpre=} {tsecond-tpre=}"
+    # print(retstr)
 
+
+# In [89]: %timeit arduino.write('u'.encode())
+# 520 µs ± 19.7 ns per loop (mean ± std. dev. of 7 runs, 1,000 loops ea
+# ch)
+# Also the full cycle seems to be about 520us as tested with the oscilloscope and this:
+#
+# while time.time_ns() - tpre < 10_000_000_000:
+#     arduino.write('u'.encode())
+#     arduino.write('d'.encode())
 
 if __name__ == "__main__":
     Fire(main)
