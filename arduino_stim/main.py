@@ -1,13 +1,13 @@
-import time
-import serial
-import pylsl
 import threading
-import tomllib
-import pylsl
+import time
 
-from fire import Fire
-from dareplane_utils.stream_watcher.lsl_stream_watcher import StreamWatcher
+import pylsl
+import serial
+import tomllib
 from dareplane_utils.logging.logger import get_logger
+from dareplane_utils.stream_watcher.lsl_stream_watcher import StreamWatcher
+from fire import Fire
+
 from arduino_stim.utils.time import sleep_s
 
 logger = get_logger("arduino_stim")
@@ -52,9 +52,7 @@ def lsl_delay(dt_us: int = 0):
         pass
 
 
-def main(
-    stop_event: threading.Event = threading.Event(), logger_level: int = 10
-):
+def main(stop_event: threading.Event = threading.Event(), logger_level: int = 10):
     logger.setLevel(logger_level)
     config = tomllib.load(open("./configs/arduino_stim_sim_config.toml", "rb"))
     sw = connect_stream_watcher(config)
@@ -73,15 +71,10 @@ def main(
         while not stop_event.is_set() and arduino is not None:
             # limit the update rate
             if time.perf_counter_ns() - tlast > dt_us * 1e3:
-                preupdate = time.perf_counter_ns()
                 sw.update()
                 dt_ms = (time.perf_counter_ns() - tlast) / 1e6
 
-                if (
-                    sw.n_new > 0
-                    and dt_ms > config["stimulation"]["grace_period_ms"]
-                ):
-
+                if sw.n_new > 0 and dt_ms > config["stimulation"]["grace_period_ms"]:
                     val = sw.unfold_buffer()[-1]
 
                     if val != last_val and len(val) == 1:
