@@ -1,0 +1,41 @@
+project:
+  type: website
+
+website:
+  sidebar:
+    - id: "main"
+      contents:
+        - section: "Documentation"
+          contents:
+            - reference/index.qmd
+
+quartodoc:
+  package: "arduino_stim" # name of the package
+  source_dir: "arduino_stim" # source code folder
+
+  title: "Documentation for the Arduino Stimulator module"
+
+  options:
+    signature_name: full
+
+  # write sidebar where quartodoc writes its content without impacting quarto
+  sidebar:
+    file: "reference/_arduino_stim_sidebar.yml"
+
+  sections:
+    - title: "Arduino Stimulator"
+      desc: |
+        :::{.callout-info}
+        The github repository for this module is located at:
+        [https://github.com/bsdlab/dp-arduino-stimulator](https://github.com/bsdlab/dp-arduino-stimulator)
+        :::
+
+    - subtitle: Core API
+      package: arduino_stim
+      desc: Core functions to run and interact with the Arduino stimulator.
+      contents:
+        - main.main
+        - main.init_lsl_outlet
+        - main.connect_stream_watcher
+        - main.get_main_thread
+        - utils.time.sleep_s
