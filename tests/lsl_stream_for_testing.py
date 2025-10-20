@@ -1,13 +1,11 @@
-import pylsl
-
-from fire import Fire
-
 import numpy as np
-
+import pylsl
+from fire import Fire
 
 SIM_SFREQ_HZ = 100
 
 SWITCH_FREQ_HZ = 2
+
 
 def get_data(high_val: float = 150) -> np.ndarray:
     data = np.zeros(SIM_SFREQ_HZ * 6000)
@@ -16,19 +14,15 @@ def get_data(high_val: float = 150) -> np.ndarray:
 
     i = high_seq_len
     while i < len(data):
-        data[i:(i + high_seq_len)] = high_val
+        data[i : (i + high_seq_len)] = high_val
         i += 2 * high_seq_len
-        
 
     return data
 
 
 def main(stream_name="control_signal"):
     data = get_data()
-    info = pylsl.StreamInfo(
-        stream_name,
-        "EEG", 1, SIM_SFREQ_HZ, "float32", "myuidtest"
-    )
+    info = pylsl.StreamInfo(stream_name, "EEG", 1, SIM_SFREQ_HZ, "float32", "myuidtest")
     outlet = pylsl.StreamOutlet(info)
 
     # Send data
@@ -41,7 +35,7 @@ def main(stream_name="control_signal"):
         required_samples = int(SIM_SFREQ_HZ * elapsed_time) - sent_samples
         if required_samples > 0:
             stamp = pylsl.local_clock()
-            outlet.push_chunk(list(data[i: i+required_samples]), stamp)
+            outlet.push_chunk(list(data[i : i + required_samples]), stamp)
             sent_samples += required_samples
 
             i += required_samples
